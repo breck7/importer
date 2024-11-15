@@ -247,4 +247,4 @@ if (typeof window === "undefined") {
   global.DOMParser = new JSDOM().window.DOMParser;
 }
 
-module.exports = HTMLToScroll;
+// module.exports = HTMLToScroll;
