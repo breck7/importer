@@ -189,4 +189,4 @@ class LaTeXToScroll {
   }
 }
 
-module.exports = LaTeXToScroll;
+// module.exports = LaTeXToScroll;
