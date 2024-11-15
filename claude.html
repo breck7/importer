@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Format Converter - LaTeX/HTML/Markdown to Scroll</title>
+    <style>
+      :root {
+        --primary-color: #3498db;
+        --gray-100: #f8f9fa;
+        --gray-200: #e9ecef;
+        --gray-700: #495057;
+        --border-color: #dee2e6;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.6;
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        background-color: var(--gray-100);
+      }
+
+      h1 {
+        text-align: center;
+        color: var(--gray-700);
+        margin-bottom: 2rem;
+      }
+
+      .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        height: calc(100vh - 200px);
+      }
+
+      .panel {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .panel-title {
+        font-weight: 600;
+        color: var(--gray-700);
+      }
+
+      .format-label {
+        font-size: 0.875rem;
+        color: var(--primary-color);
+      }
+
+      textarea {
+        flex-grow: 1;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-family: "Monaco", "Menlo", "Ubuntu Mono", "Consolas", monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        resize: none;
+        background-color: var(--gray-100);
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+      }
+
+      .copy-button {
+        padding: 0.5rem 1rem;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: background-color 0.2s;
+      }
+
+      .copy-button:hover {
+        background-color: #2980b9;
+      }
+
+      .copy-button:active {
+        transform: translateY(1px);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Format Converter</h1>
+    <div class="container">
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <span class="panel-title">Input</span>
+            <span class="format-label" id="detected-format"
+              >(Paste content to detect format)</span
+            >
+          </div>
+        </div>
+        <textarea
+          id="input"
+          placeholder="Paste your LaTeX, HTML, or Markdown content here..."
+        ></textarea>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Scroll Output</div>
+          <button class="copy-button" id="copy-button">Copy</button>
+        </div>
+        <textarea
+          id="output"
+          readonly
+          placeholder="Converted content will appear here..."
+        ></textarea>
+      </div>
+    </div>
+
+    <script src="latex.js"></script>
+    <script src="html.js"></script>
+    <script src="markdown.js"></script>
+    <script>
+      // Initialize converters
+      const latexConverter = new LaTeXToScroll();
+      const htmlConverter = new HTMLToScroll();
+      const markdownConverter = new MarkdownToScroll();
+
+      // Get DOM elements
+      const inputArea = document.getElementById("input");
+      const outputArea = document.getElementById("output");
+      const formatLabel = document.getElementById("detected-format");
+      const copyButton = document.getElementById("copy-button");
+
+      // Detect format based on content
+      function detectFormat(content) {
+        // HTML detection - look for common HTML tags
+        if (/<[a-z][\s\S]*>/i.test(content)) {
+          return "HTML";
+        }
+
+        // LaTeX detection - look for common LaTeX commands
+        if (/\\[a-zA-Z]+{/.test(content) || /\\begin{/.test(content)) {
+          return "LaTeX";
+        }
+
+        // Markdown detection - look for common Markdown syntax
+        if (/^#+ |^-{3,}$|^\* |\[.+\]\(.+\)|\*\*.+\*\*|^>.+$/m.test(content)) {
+          return "Markdown";
+        }
+
+        return "Unknown";
+      }
+
+      // Convert content based on detected format
+      function convertContent(content, format) {
+        try {
+          switch (format) {
+            case "HTML":
+              return htmlConverter.convert(content);
+            case "LaTeX":
+              return latexConverter.convert(content);
+            case "Markdown":
+              return markdownConverter.convert(content);
+            default:
+              return "Unable to detect format. Please ensure your content is valid HTML, LaTeX, or Markdown.";
+          }
+        } catch (error) {
+          console.error("Conversion error:", error);
+          return "Error converting content. Please check the console for details.";
+        }
+      }
+
+      // Handle input changes
+      let debounceTimeout;
+      inputArea.addEventListener("input", () => {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+          const content = inputArea.value.trim();
+          if (content) {
+            const format = detectFormat(content);
+            formatLabel.textContent = `(Detected: ${format})`;
+            outputArea.value = convertContent(content, format);
+          } else {
+            formatLabel.textContent = "(Paste content to detect format)";
+            outputArea.value = "";
+          }
+        }, 300);
+      });
+
+      // Handle copy button
+      copyButton.addEventListener("click", () => {
+        outputArea.select();
+        document.execCommand("copy");
+
+        // Visual feedback
+        copyButton.textContent = "Copied!";
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1500);
+      });
+
+      // Handle paste event
+      inputArea.addEventListener("paste", (e) => {
+        // Short timeout to allow paste to complete
+        setTimeout(() => {
+          const content = inputArea.value.trim();
+          const format = detectFormat(content);
+          formatLabel.textContent = `(Detected: ${format})`;
+          outputArea.value = convertContent(content, format);
+        }, 0);
+      });
+    </script>
+  </body>
+</html>
